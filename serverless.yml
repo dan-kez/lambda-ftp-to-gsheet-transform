@@ -1,0 +1,68 @@
+service: ftp-to-lambda-bridge
+# app and org for use with dashboard.serverless.com
+app: ftp-to-lambda-bridge
+org: ${env:SLS_ORG_NAME, 'dankez'}
+
+custom:
+  bucket: ${env:S3_BUCKET_NAME, 'kez-test-mac-shipping-xml-backup'}
+  alerts:
+    stages:
+      - dev
+      - production
+    topics:
+      alarm:
+        topic: ${self:service}-${opt:stage}-alerts-alarm
+        notifications:
+          - protocol: email
+            endpoint: ${env:ALERTING_EMAIL_ADDRESS, 'daniel.kez+cloudwatch.alerts@gmail.com'}
+    alarms:
+      - functionErrors
+      - functionThrottles
+
+provider:
+  name: aws
+  runtime: python3.8
+  environment:
+    USE_PARAMETER_STORE: True
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - s3:PutObject
+        - s3:PutObjectAcl
+        - s3:GetObject
+        - s3:GetObjectAcl
+        - s3:ListObjects
+        - s3:ListObjectsV2
+        - s3:ListBucket
+      Resource:
+        - "arn:aws:s3:::${self:custom.bucket}"
+        - "arn:aws:s3:::${self:custom.bucket}/*"
+    - Effect: Allow
+      Action:
+        - ssm:GetParameter
+      Resource: "arn:aws:ssm:us-east-1:885967057520:parameter/*"
+
+functions:
+  ftp_to_s3_handler:
+    handler: handlers.handler_transfer_editrade_files_to_s3
+    timeout: 510
+    events:
+      - schedule: rate(10 minutes)
+
+  send_to_google_sheets:
+    handler: handlers.handler_parse_s3_xml_file_to_sheet
+    events:
+      - s3:
+          bucket: "${self:custom.bucket}"
+          event: s3:ObjectCreated:*
+          rules:
+            - prefix: EDITRADEOUT/
+            - suffix: .xml
+
+  bulk_send_to_google_sheets:
+    handler: handlers.handler_bulk_parse_xml_files
+    timeout: 180
+
+plugins:
+  - serverless-python-requirements
+  - serverless-plugin-aws-alerts

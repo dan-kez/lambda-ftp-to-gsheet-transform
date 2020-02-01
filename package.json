@@ -1,0 +1,12 @@
+{
+  "name": "ftp-to-lambda-bridge",
+  "description": "",
+  "version": "0.1.0",
+  "author": "daniel.kez@gmail.com",
+  "dependencies": {},
+  "devDependencies": {
+    "serverless": "^1.62.0",
+    "serverless-plugin-aws-alerts": "^1.4.0",
+    "serverless-python-requirements": "^5.0.1"
+  }
+}
