@@ -12,8 +12,8 @@ ensure_env_file:
 
 create_env: install_pyenv
 	if ! pyenv local; then \
-		pyenv virtualenv 3.8.1 ftp-to-lambda-bridge; \
-		pyenv local ftp-to-lambda-bridge; \
+		pyenv virtualenv 3.8.1 lambda-ftp-to-gsheet-transform; \
+		pyenv local lambda-ftp-to-gsheet-transform; \
 	fi
 
 install_pyenv:

@@ -1,5 +1,5 @@
 {
-  "name": "ftp-to-lambda-bridge",
+  "name": "lambda-ftp-to-gsheet-transform",
   "description": "",
   "version": "0.1.0",
   "author": "daniel.kez@gmail.com",

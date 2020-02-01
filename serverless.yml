@@ -1,6 +1,6 @@
-service: ftp-to-lambda-bridge
+service: lambda-ftp-to-gsheet-transform
 # app and org for use with dashboard.serverless.com
-app: ftp-to-lambda-bridge
+app: lambda-ftp-to-gsheet-transform
 org: ${env:SLS_ORG_NAME, 'dankez'}
 
 custom:
