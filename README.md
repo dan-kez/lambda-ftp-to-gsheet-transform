@@ -33,7 +33,7 @@ can be put on a shelf and not need much oversight.
 - Make it faster. I did have a parallel upload feature. Unfortunately, this FTP server limits me to one connection per user and an [active FTP connection can only transfer one file at a time per the RFC.](https://stackoverflow.com/a/13195869) 
 - Automated Graphs. Right now I have super basic monitoring via cloudwatch + serverless's site. Not horrible, but could be better.
 - Better services / classes. I'm not really using classes and this truly is like a bag of scripts. It works since I am effectively just running them on a cron. Could be better and may help me test better in the future.
-
+dataclass
 ## Local Setup
 ```bash
 make # Will install pyenv and make a virtual env

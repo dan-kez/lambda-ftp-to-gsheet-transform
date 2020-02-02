@@ -7,32 +7,7 @@ from retry import retry
 
 import settings
 from xml_to_sheet.gspread_client import get_sheet
-
-#####################
-# Header Management #
-#####################
-
-IDENTIFYING_HEADER = 'FILE_NO'
-
-# Order here matters and cannot be updated without moving data in the spreadsheet
-HEADERS_LIST = [
-    'CUSTOMER_REFERENCE_NO',
-    'IMPORT_DATE',
-    'US_ENTRY_PORT',
-    'IMPORTING_CARRIER',
-    'ENTRY_DATE',
-    'SUMMARY_DATE',
-    'STATEMENT_DATE',
-    'ESTIMATED_ARRIVAL_DATE',
-    'RELEASE_DATE_TIME',
-    'ISSUER_CODE',
-    'MASTER',
-]
-# This list is to include all unique entries as a CSV string in the final sheet
-CSV_HEADERS_LIST = [
-    'HTS',
-]
-COMBINED_HEADERS_LIST = [IDENTIFYING_HEADER] + CSV_HEADERS_LIST + HEADERS_LIST
+from xml_to_sheet.headers import IDENTIFYING_HEADER, HEADERS
 
 s3 = boto3.client('s3')
 
@@ -66,15 +41,15 @@ def _ensure_headers_are_set():
     """
     header_row_range = get_sheet().range('A1:GA1')
     current_headers = [header_row_cell.value for header_row_cell in header_row_range if header_row_cell.value]
-    for i, hard_coded_header in enumerate(COMBINED_HEADERS_LIST):
+    for i, hard_coded_header in enumerate(HEADERS):
         try:
-            if current_headers[i] != hard_coded_header:
+            if current_headers[i] != hard_coded_header.name:
                 raise ValueError('Headers in google sheet do not match hard coded list')
         except IndexError:
             logging.info('New header "{}" is being added.'.format(hard_coded_header))
             pass
         # Update value as we may be appending more headers after a code change
-        header_row_range[i].value = hard_coded_header
+        header_row_range[i].value = hard_coded_header.name
     get_sheet().update_cells(header_row_range)
 
 
@@ -88,12 +63,12 @@ def _write_or_update_row(header_value_mapping):
     :param header_value_mapping: dict of header names to the associated value to write
     :return: Not meaningful
     """
-    row_to_write = [header_value_mapping.get(header) for header in COMBINED_HEADERS_LIST]
+    row_to_write = [header_value_mapping.get(header.name) for header in HEADERS]
 
-    index_of_id_header = COMBINED_HEADERS_LIST.index(IDENTIFYING_HEADER)
+    index_of_id_header = HEADERS.index(IDENTIFYING_HEADER)
     found_existing_row_for_id = None
 
-    for cell in get_sheet().findall(str(header_value_mapping.get(IDENTIFYING_HEADER))):
+    for cell in get_sheet().findall(str(header_value_mapping.get(IDENTIFYING_HEADER.name))):
         # Google sheets is 1 indexed and python lists are 0 indexed
         if cell.col == (index_of_id_header + 1):
             found_existing_row_for_id = cell
@@ -138,15 +113,15 @@ def _parse_header_value_mapping_from_file(file_object):
     soup = BeautifulSoup(file_object, 'lxml-xml')
     header_value_mapping = {}
 
-    for header in CSV_HEADERS_LIST:
-        nodes = soup.CUSTOMS_ENTRY_FILE.find_all(header)
-        if nodes:
-            # Use a set to dedupe
-            header_value_mapping[header] = ','.join(set([node.string for node in nodes]))
-
-    for header in [IDENTIFYING_HEADER] + HEADERS_LIST:
-        node = soup.CUSTOMS_ENTRY_FILE.find(header)
-        if node and node.string:
-            header_value_mapping[header] = node.string
+    for header in HEADERS:
+        if header.is_csv_value:
+            nodes = soup.CUSTOMS_ENTRY_FILE.find_all(header.name)
+            if nodes:
+                # Use a set to dedupe
+                header_value_mapping[header.name] = ','.join(set([node.string for node in nodes]))
+        else:
+            node = soup.CUSTOMS_ENTRY_FILE.find(header.name)
+            if node and node.string:
+                header_value_mapping[header.name] = node.string
 
     return header_value_mapping
