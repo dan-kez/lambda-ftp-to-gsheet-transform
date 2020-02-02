@@ -1,12 +1,17 @@
+import logging
+
+import boto3
+import gspread
 from bs4 import BeautifulSoup
+from retry import retry
 
 import settings
-from xml_to_sheet.gspread_client import gspread_client
-import boto3
+from xml_to_sheet.gspread_client import get_sheet
 
 #####################
 # Header Management #
 #####################
+
 IDENTIFYING_HEADER = 'FILE_NO'
 
 # Order here matters and cannot be updated without moving data in the spreadsheet
@@ -31,10 +36,8 @@ COMBINED_HEADERS_LIST = [IDENTIFYING_HEADER] + CSV_HEADERS_LIST + HEADERS_LIST
 
 s3 = boto3.client('s3')
 
-# TODO: Move this to a class instance method so it's not attempting to connect at module load
-sheet = gspread_client.open(settings.GOOGLE_SHEET_NAME).sheet1
 
-
+@retry(gspread.exceptions.APIError, tries=4, delay=10, backoff=2)
 def parse_s3_xml_file_to_sheet(s3_path):
     """
     Primary run method. Given an s3 path, download, parse and update the associated google sheet
@@ -61,18 +64,18 @@ def _ensure_headers_are_set():
 
     :return: Not meaningful
     """
-    header_row_range = sheet.range('A1:GA1')
+    header_row_range = get_sheet().range('A1:GA1')
     current_headers = [header_row_cell.value for header_row_cell in header_row_range if header_row_cell.value]
     for i, hard_coded_header in enumerate(COMBINED_HEADERS_LIST):
         try:
             if current_headers[i] != hard_coded_header:
                 raise ValueError('Headers in google sheet do not match hard coded list')
         except IndexError:
-            print('New header "{}" is being added.'.format(hard_coded_header))
+            logging.info('New header "{}" is being added.'.format(hard_coded_header))
             pass
         # Update value as we may be appending more headers after a code change
         header_row_range[i].value = hard_coded_header
-    sheet.update_cells(header_row_range)
+    get_sheet().update_cells(header_row_range)
 
 
 def _write_or_update_row(header_value_mapping):
@@ -90,20 +93,20 @@ def _write_or_update_row(header_value_mapping):
     index_of_id_header = COMBINED_HEADERS_LIST.index(IDENTIFYING_HEADER)
     found_existing_row_for_id = None
 
-    for cell in sheet.findall(str(header_value_mapping.get(IDENTIFYING_HEADER))):
+    for cell in get_sheet().findall(str(header_value_mapping.get(IDENTIFYING_HEADER))):
         # Google sheets is 1 indexed and python lists are 0 indexed
         if cell.col == (index_of_id_header + 1):
             found_existing_row_for_id = cell
 
     # Insert row at bottom of sheet (Multi user conflict?)
     if found_existing_row_for_id:
-        existing_data_row_range = sheet.range(
+        existing_data_row_range = get_sheet().range(
             'A{row_num}:GA{row_num}'.format(row_num=found_existing_row_for_id.row))
         for i, value in enumerate(row_to_write):
             existing_data_row_range[i].value = value
-        sheet.update_cells(existing_data_row_range)
+        get_sheet().update_cells(existing_data_row_range)
     else:
-        sheet.append_row(row_to_write)
+        get_sheet().append_row(row_to_write)
 
 
 ##########################################

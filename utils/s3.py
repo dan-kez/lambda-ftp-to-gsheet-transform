@@ -29,7 +29,8 @@ def get_matching_s3_keys(bucket, prefix='', suffix='', days_back=None):
         # The S3 API response is a large blob of metadata.
         # 'Contents' contains information about the listed objects.
         resp = s3.list_objects_v2(**kwargs)
-        for obj in resp['Contents']:
+
+        for obj in resp.get('Contents', []):
             key = obj['Key']
             created_days_ago = (today - obj['LastModified']).days
 

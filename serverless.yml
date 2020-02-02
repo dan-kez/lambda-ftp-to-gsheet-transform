@@ -4,17 +4,17 @@ app: lambda-ftp-to-gsheet-transform
 org: dankez
 
 custom:
-  bucket: ${env:S3_BUCKET_NAME, 'kez-test-mac-shipping-xml-backup'}
+  bucket: ${env:S3_BUCKET_NAME}
   alerts:
     stages:
       - dev
-      - production
+      - prod
     topics:
       alarm:
         topic: ${self:service}-${opt:stage}-alerts-alarm
         notifications:
           - protocol: email
-            endpoint: ${env:ALERTING_EMAIL_ADDRESS, 'daniel.kez+cloudwatch.alerts@gmail.com'}
+            endpoint: ${env:ALERTING_EMAIL_ADDRESS}
     alarms:
       - functionErrors
       - functionThrottles
@@ -40,7 +40,7 @@ provider:
     - Effect: Allow
       Action:
         - ssm:GetParameter
-      Resource: "arn:aws:ssm:us-east-1:885967057520:parameter/*"
+      Resource: "arn:aws:ssm:#{AWS::Region  }:#{AWS::AccountId}:parameter/*"
 
 functions:
   ftp_to_s3_handler:
@@ -48,6 +48,24 @@ functions:
     timeout: 510
     events:
       - schedule: rate(10 minutes)
+
+  # Run a nightly backfill just in case there were any errors
+  nightly_backfill:
+    handler: handlers.handler_bulk_parse_xml_files
+    timeout: 900 # 15 min max timeout
+    events:
+      - schedule: cron(0 20 * * ? *) # Every night at 9 pm EST
+
+  # Run a nightly backfill just in case there were any errors
+  monthly_cleanup:
+    handler: handlers.handler_delete_old_files
+    timeout: 900 # 15 min max timeout
+    events:
+      - schedule:
+          rate: cron(0 21 * * ? *) # Every night at 10pm EST
+          input:
+            days_back: 30
+            dry_run: false
 
   send_to_google_sheets:
     handler: handlers.handler_parse_s3_xml_file_to_sheet
@@ -66,3 +84,5 @@ functions:
 plugins:
   - serverless-python-requirements
   - serverless-plugin-aws-alerts
+  - serverless-dotenv-plugin
+  - serverless-pseudo-parameters
