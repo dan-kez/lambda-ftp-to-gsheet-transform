@@ -26,14 +26,14 @@ can be put on a shelf and not need much oversight.
 
 ### What are some things I'd add / change
 - Really this project is missing a number of tests. Integration tests would be great.
-- A bit better error handling. There some rudimentary stuff here but it could be better.
+- A bit better error handling. There some rudimentary stuff including exponential backoffs but it could be better.
 - Better logging.
 - A script to scaffold the parameter store. Mostly didn't add since I'm not planning to use this in multiple AWS accounts
 - Potentially using google cloud so there are fewer things to integrate with. I'm more familiar with aws so I went with that.
 - Make it faster. I did have a parallel upload feature. Unfortunately, this FTP server limits me to one connection per user and an [active FTP connection can only transfer one file at a time per the RFC.](https://stackoverflow.com/a/13195869) 
 - Automated Graphs. Right now I have super basic monitoring via cloudwatch + serverless's site. Not horrible, but could be better.
-- Better services / classes. I'm not really using classes and this truly is like a bag of scripts. It works since I am effectively just running them on a cron. Could be better and may help me test better in the future.
-dataclass
+- Better services / classes. This truly is like a bag of scripts. It works since I am effectively just running them on a cron. Could be better and may help me test better in the future.
+
 ## Local Setup
 ```bash
 make # Will install pyenv and make a virtual env
@@ -79,7 +79,7 @@ The script / lambda will automatically create a worksheet but it will be inacces
 To remedy this we have a script to help automate sharing the sheet.
 
 ```bash
-python -m management.create_and_share_sheet --role writer --share_with_email daniel.kez@gmail.com
+python -m management.create_and_share_sheet --role writer --share_with_email EMAIL_OF_INTEREST@gmail.com
 ```
 
 ### Helpful one liners

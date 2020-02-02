@@ -3,9 +3,6 @@ install: create_env
 	pip install -r requirements.txt
 
 deploy: ensure_env_file
-	npx sls deploy --stage dev
-
-deploy_prod: ensure_env_file
 	npx sls deploy --stage prod
 
 ensure_env_file:
