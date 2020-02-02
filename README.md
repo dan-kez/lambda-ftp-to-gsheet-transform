@@ -24,6 +24,10 @@ Some other quality of life functions include
 Best part: It's going to be free for a long while with the current load. That was also a goal. Use some cheap tools that
 can be put on a shelf and not need much oversight.
 
+### Visual Overview
+![Design Overview](./design_overview.png "Design Overview")
+> Built with whimsical
+
 ### What are some things I'd add / change
 - Really this project is missing a number of tests. Integration tests would be great.
 - A bit better error handling. There some rudimentary stuff including exponential backoffs but it could be better.
@@ -83,6 +87,10 @@ python -m management.create_and_share_sheet --role writer --share_with_email EMA
 ```
 
 ### Helpful one liners
+- Export `.env` variables to local shell
+    ```bash
+    export $(egrep -v '^#' .env | xargs)  
+    ```
 
 - Run backfill from s3 to sheets for the last day
     ```bash
@@ -96,3 +104,6 @@ python -m management.create_and_share_sheet --role writer --share_with_email EMA
     ```bash
     python -c 'import handlers; handlers.handler_delete_old_files({ "days_back": 30, "dry_run": "false" }, {})'
     ```
+
+## Notable Mentions
+* [Transfer File From FTP Server to AWS S3 Bucket Using Python](https://medium.com/better-programming/transfer-file-from-ftp-server-to-a-s3-bucket-using-python-7f9e51f44e35)
