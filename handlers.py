@@ -61,7 +61,9 @@ def handler_bulk_parse_xml_files(event, context):
 
 def handler_delete_old_files(event, context):
     days_back = int(event.get('days_back', 30))
-    dry_run = bool(strtobool(event.get('dry_run', 'true')))
+    dry_run = event.get('dry_run', True)
+    if not isinstance(dry_run, bool):
+        raise ValueError('dry_run must either be a boolean input. Got {}'.format(dry_run))
 
     remove_old_files_from_ftp(days_back=days_back, dry_run=dry_run)
 
