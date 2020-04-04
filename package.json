@@ -1,0 +1,19 @@
+{
+  "name": "generalized-editrade-customs-sync",
+  "version": "1.0.0",
+  "description": "",
+  "dependencies": {
+    "serverless": "^1.67.0",
+    "serverless-dotenv-plugin": "^2.3.2",
+    "serverless-plugin-aws-alerts": "^1.4.0",
+    "serverless-pseudo-parameters": "^2.5.0",
+    "serverless-python-requirements": "^5.1.0",
+    "serverless-step-functions": "^2.17.4"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "daniel.kez@gmail.com",
+  "license": "MIT"
+}
