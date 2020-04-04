@@ -4,12 +4,12 @@ import os
 USE_PARAMETER_STORE = os.getenv('USE_PARAMETER_STORE', False)
 
 S3_BUCKET_NAME = os.getenv('S3_BUCKET_NAME')
-S3_ROOT_DIR = 'EDITRADEOUT/'  # S3 paths do not start with a leading /
+S3_ROOT_DIR = 'EDITRADEOUT/002113/'  # S3 paths do not start with a leading /
 
 FTP_HOST = os.getenv('FTP_HOST', 'ftphost.editrade.com')
 EDITRADE_FTP_USERNAME = os.getenv('EDITRADE_FTP_USERNAME')
 EDITRADE_FTP_PASSWORD = os.getenv('EDITRADE_FTP_PASSWORD')
-FTP_ROOT_DIR = os.getenv('FTP_ROOT_DIR', '/Usr/macship/EDITRADEOUT')
+FTP_ROOT_DIR = os.getenv('FTP_ROOT_DIR', '/Usr/macship/EDITRADEOUT/002113/')
 FTP_PORT = int(os.getenv('FTP_PORT', 22))
 
 CHUNK_SIZE = 6291456

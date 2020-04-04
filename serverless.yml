@@ -74,7 +74,7 @@ functions:
           bucket: "${self:custom.bucket}"
           event: s3:ObjectCreated:*
           rules:
-            - prefix: EDITRADEOUT/
+            - prefix: EDITRADEOUT/002113/
             - suffix: .xml
 
   bulk_send_to_google_sheets:
