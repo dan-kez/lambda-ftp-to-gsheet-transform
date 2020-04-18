@@ -1,8 +1,10 @@
 .env
+.env.dev
 .python-version
 node_modules
 __pycache__
 .idea
+.pytest_cache
 
 # Distribution / packaging
 .Python
@@ -25,3 +27,7 @@ var/
 # Serverless directories
 .serverless
 serverless_sdk
+
+# coverage
+.coverage
+htmlcov

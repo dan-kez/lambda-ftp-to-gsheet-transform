@@ -1,33 +1,56 @@
-# Welcome to Serverless!
-#
-# This file is the main config file for your service.
-# It's very minimal at this point and uses default values.
-# You can always add more config options for more control.
-# We've included some commented out config examples here.
-# Just uncomment any of them to get that config option.
-#
-# For full config options, check the docs:
-#    docs.serverless.com
-#
-# Happy Coding!
-
 service: editrade-sync
 # app and org for use with dashboard.serverless.com
 app: generalized-editrade-customs-sync
 org: dankez
-
-# You can pin your service to only deploy with a specific Serverless version
-# Check out our docs for more details
-# frameworkVersion: "=X.X.X"
 
 package:
   exclude:
     - node_modules/**
     - venv/**
 
+custom:
+  bucket: ${env:S3_BUCKET_NAME}
+
 provider:
   name: aws
   runtime: python3.8
+  stage: dev
+  environment:
+    USE_PARAMETER_STORE: True
+    STAGE: ${opt:stage, self:provider.stage}
+    DYNAMO_HOST: ""
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - s3:PutObject
+        - s3:PutObjectAcl
+        - s3:GetObject
+        - s3:GetObjectAcl
+        - s3:ListObjects
+        - s3:ListObjectsV2
+        - s3:ListBucket
+        - s3:ListBucket
+      Resource:
+        - "arn:aws:s3:::${self:custom.bucket}"
+        - "arn:aws:s3:::${self:custom.bucket}/*"
+    - Effect: Allow
+      Action:
+        - dynamodb:BatchGet
+        - dynamodb:DescribeStream
+        - dynamodb:DescribeTable
+        - dynamodb:Get*
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:BatchWrite*
+        - dynamodb:CreateTable
+        - dynamodb:Delete*
+        - dynamodb:Update*
+        - dynamodb:PutItem
+      Resource: "arn:aws:dynamodb:#{AWS::Region}:#{AWS::AccountId}:table/gen-editrade-sync__prod*"
+    - Effect: Allow
+      Action:
+        - ssm:GetParameter
+      Resource: "arn:aws:ssm:#{AWS::Region}:#{AWS::AccountId}:parameter/*"
 
 plugins:
   - serverless-step-functions
@@ -38,23 +61,40 @@ plugins:
 
 functions:
   checkNewFilesFunc:
-    handler: handler.checknewfiles
+    handler: src/handler.checknewfiles
+    package: {}
   downloadAndProcessEditradeFile:
-    handler: handler.downloadandprocesseditradefile
+    handler: src/handler.downloadandprocesseditradefile
+    package: {}
+  updategooglesheets:
+    handler: src/handler.updategooglesheets
+    package: {}
+    events:
+      - schedule:
+          rate: rate(10 minutes)
+          input:
+            minutes: 11
+
+resources: # CloudFormation template syntax
+  Resources:
+    GeneralizedEditradeCustomsSyncLogs:
+      Type: AWS::Logs::LogGroup
+      Properties:
+        LogGroupName: /aws/apigateway/GeneralizedEditradeCustomsSyncLogs-Logs
 
 stepFunctions:
   stateMachines:
     checkNewFiles:
       type: EXPRESS
+      loggingConfig:
+        level: ALL
+        includeExecutionData: true
+        destinations:
+          - Fn::GetAtt: [GeneralizedEditradeCustomsSyncLogs, Arn]
       events:
         - schedule:
             rate: rate(10 minutes)
             enabled: true
-            input:
-              key1: value1
-              key2: value2
-              stageParams:
-                stage: dev
       name: generalized-editrade-customs-sync
       definition:
         Comment: "Check if there are files to sync from editrade FTP"
@@ -70,6 +110,7 @@ stepFunctions:
                 Next: ErrorNoFilesToProcess
           MapDownloadAndProcessEditradeFile:
             Type: Map
+            MaxConcurrency: 1
             Iterator:
               StartAt: DownloadAndProcessEditradeFile
               States:
