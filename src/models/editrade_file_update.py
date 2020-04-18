@@ -123,7 +123,7 @@ class EditradeFileUpdate(CreatedTimeModelMixin, UpdateTimeModelMixin, Model):
     # For use in the GSI
     needs_processing = BooleanAsNumberAttribute(default_for_new=True)
 
-    def set_parsed_data(self, parsed_data: Dict[str, str]) -> None:
+    def set_parsed_data(self, parsed_data: Dict[str, Dict[str, str]]) -> None:
         """
         Sets all necessary properties when setting processed data for the file update
 
@@ -131,8 +131,11 @@ class EditradeFileUpdate(CreatedTimeModelMixin, UpdateTimeModelMixin, Model):
         :return: not meaningful
         """
         for key, value in parsed_data.items():
-            assert type(key) == str, "All keys must be strings"
-            assert type(value) == str, "All values must be strings"
+            assert isinstance(key, str), "All top level keys must be strings"
+            assert isinstance(value, dict), "All top level values must be dicts"
+            for inner_key, inner_value in value.items():
+                assert isinstance(inner_key, str), "All inner keys must be strings"
+                assert isinstance(inner_value, str), "All inner values must be strings"
 
         self.parsed_data = parsed_data
         self.parsed_time = datetime.utcnow()

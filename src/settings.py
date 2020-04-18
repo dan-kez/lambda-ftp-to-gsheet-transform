@@ -1,6 +1,8 @@
 import json
 import os
 
+from functions.custom_lambda_exceptions import NoFilesToProcess
+
 STAGE = os.getenv("STAGE", "dev")
 DYNAMO_TABLE_PREFIX = os.getenv("DYNAMO_TABLE_PREFIX", f"gen-editrade-sync__{STAGE}__")
 # If set to falsey value default to None
@@ -48,4 +50,16 @@ if USE_PARAMETER_STORE:
         import sentry_sdk
         from sentry_sdk.integrations.aws_lambda import AwsLambdaIntegration
 
-        sentry_sdk.init(SENTRY_DSN, integrations=[AwsLambdaIntegration()])
+        def ignore_known_exceptions(event, hint):
+            if "exc_info" in hint:
+                exc_type, exc_value, tb = hint["exc_info"]
+                # Ignore NoFilesToProcess as it's a handled short circuit error
+                if isinstance(exc_value, (NoFilesToProcess,)):
+                    return None
+            return event
+
+        sentry_sdk.init(
+            SENTRY_DSN,
+            integrations=[AwsLambdaIntegration()],
+            before_send=ignore_known_exceptions,
+        )

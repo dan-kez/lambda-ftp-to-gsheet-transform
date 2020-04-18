@@ -4,7 +4,6 @@ from typing import List, Set, Dict
 
 import boto3
 from lxml import etree
-from pynamodb.models import BatchWrite
 
 import settings
 from models.column import AccountColumn
@@ -15,7 +14,7 @@ from models.editrade_file_update import (
     FileDiffsByFileIDIndex,
     AccountIDByParseTime,
 )
-from models.editrade_merged_file import EditradeMergedFile, MergedFileByUpdateTime
+from models.editrade_merged_file import EditradeMergedFile
 from services.editrade_ftp_file_parser import EditradeFTPFileParser
 from services.ftp_to_s3 import editrade_ftp_service
 from utils.merge_dicts import merge_dicts
@@ -37,7 +36,7 @@ def _upload_to_s3_and_create_diff(
 
 def _procces_xml_and_columns(
     xml_string: str, columns: List[AccountColumn]
-) -> Dict[str, str]:
+) -> Dict[str, Dict[str, str]]:
     """
     Given the xml and column set, do an in memory only transformation to a serializable to json python dict
     :param xml_string: XML to parse
@@ -45,17 +44,31 @@ def _procces_xml_and_columns(
     :return: An unordered dict mapping the column name to the value
     """
     parsed_dict = {}
+    if not columns:
+        return {}
     tree = etree.fromstring(xml_string)
-    for column in columns:
-        values = tree.xpath(column.xpath_query)
-        if values:
-            if column.has_multiple:
-                value_to_set = ",".join([value.text for value in values if value.text])
-                if value_to_set:
-                    parsed_dict[column.column_name] = value_to_set
-            else:
-                if values[0].text:
-                    parsed_dict[column.column_name] = values[0].text
+    relative_by_paths = {column.relative_to_xpath for column in columns}
+    assert (
+        len(relative_by_paths) == 1
+    ), "Should only be one relative to path for an account"
+
+    relative_by_path = relative_by_paths.pop()
+    identifying_nodes = tree.xpath(relative_by_path)
+    for id_node in identifying_nodes:
+        row_id = id_node.text
+        parsed_dict[row_id] = {}
+        for column in columns:
+            values = id_node.xpath(column.xpath_query)
+            if values:
+                if column.has_multiple:
+                    value_to_set = ",".join(
+                        [value.text for value in values if value.text]
+                    )
+                    if value_to_set:
+                        parsed_dict[row_id][column.column_name] = value_to_set
+                else:
+                    if values[0].text:
+                        parsed_dict[row_id][column.column_name] = values[0].text
     return parsed_dict
 
 
@@ -82,6 +95,7 @@ class EditradeFileService(object):
             editrade_file_update
         )
         self.merge_file_diffs_for_file_id(editrade_file_object.file_id)
+        return editrade_file_object
 
     def _get_xml_string_from_s3(self, s3_xml_path: str) -> str:
         """
@@ -217,14 +231,14 @@ class EditradeFileService(object):
 
     @staticmethod
     def merge_recent_processed_files_for_account_id(
-        account_id: str, days_back: int = None, autosave: bool = True
+        account_id: str, days_back: int = None, batch=None
     ) -> Dict[str, EditradeMergedFile]:
         """
         Method to merge all file diffs and optionally save them.
 
         :param account_id: Account id to process
         :param days_back: If None, then process all file diffs for the account. If set, limit by days back inclusive.
-        :param autosave: If true, save the merged parsed file values to the shared table
+        :param batch:
         :return: the merged result by file id
         """
         # Get file ids to check based on days back attribute
@@ -242,14 +256,14 @@ class EditradeFileService(object):
 
         merged_by_file_id = {
             file_id: EditradeFileService.merge_file_diffs_for_file_id(
-                file_id, autosave=autosave
+                file_id, batch=batch
             )
             for file_id in file_ids_to_query
         }
         return merged_by_file_id
 
     @staticmethod
-    def create_all_file_report_for_account_id(account_id):
+    def create_all_file_report_for_account_id(account_id) -> List[List[str]]:
         """
         This is a bulk method that will get all the merged file data, assemble into a list of lists format (csv-esque)
         with the appropriate ordering based on the column definitions for the account.
@@ -265,10 +279,12 @@ class EditradeFileService(object):
 
         csv_result: List[List[str]] = [ordered_headers]
         for merged_file in EditradeMergedFile.query(account_id):
-            row_data = [
-                merged_file.parsed_data.get(header) for header in ordered_headers
-            ]
-            csv_result.append(row_data)
+            for row_id, parsed_data_for_row in merged_file.parsed_data.items():
+                row_data = [
+                    parsed_data_for_row.get(header) for header in ordered_headers
+                ]
+                csv_result.append(row_data)
+
         return csv_result
 
     @staticmethod

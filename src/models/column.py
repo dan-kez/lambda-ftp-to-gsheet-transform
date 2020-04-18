@@ -46,7 +46,9 @@ class AccountColumn(UpdateTimeModelMixin, CreatedTimeModelMixin, Model):
     # to use relative xpath syntax such at `./node_name`
     # There should only be one relative_to_xpath per_account at present. This isn't enforced by the schema
     # but I plan to migrate from dynamodb soon anyways given it's cost/ query limitations.
-    relative_to_xpath = UnicodeAttribute(default="/")
+    relative_to_xpath = UnicodeAttribute(
+        default_for_new="/CUSTOMS_ENTRY_FILE/ENTRY/FILE_NO"
+    )
 
     # If true, transform multiple results to a CSV
     has_multiple = BooleanAttribute(default=False)

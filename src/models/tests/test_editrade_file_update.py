@@ -10,7 +10,7 @@ from models.editrade_file_update import EditradeFileUpdate
 sentinel_datetime = datetime(1901, 2, 1, tzinfo=tzutc())
 
 
-@pytest.mark.parametrize("input_data", [{}, {"asd": "asd"}])
+@pytest.mark.parametrize("input_data", [{}, {"id": {"asd": "value"}}])
 def test_set_all_fields_for_processed_data(input_data):
     with patch("models.editrade_file_update.datetime") as datetime_mock:
         datetime_mock.utcnow.return_value = sentinel_datetime
@@ -33,11 +33,20 @@ def test_set_all_fields_for_processed_data(input_data):
     "input_data,thrown_error_message",
     [
         [{}, ""],
-        [{"asd": "asd"}, ""],
-        [{"key1": 12, "key2": "string val"}, "All values must be strings"],
-        [{12: "foo", "key2": "string val"}, "All keys must be strings"],
+        [{"asd": {"1": "2"}}, ""],
+        [{"asd": "asd"}, "All top level values must be dicts"],
+        [{"asd": {"1": 2}}, "All inner values must be strings"],
+        [{12: "foo", "key2": "string val"}, "All top level keys must be strings"],
+        [{"asd": {1: "2"}}, "All inner keys must be strings"],
     ],
-    ids=["No data", "Basic dict", "Dict with invalid value", "Dict with invalid key"],
+    ids=[
+        "No data",
+        "Basic dict",
+        "top level values must be dicts",
+        "Dict with invalid value",
+        "Dict with invalid key",
+        "All inner keys must be strings",
+    ],
 )
 @pytest.mark.integration
 def test_set_all_fields_for_processed_data_already_saved(

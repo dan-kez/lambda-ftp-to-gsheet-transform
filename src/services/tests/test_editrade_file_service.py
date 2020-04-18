@@ -30,7 +30,7 @@ def test_xml_string():
                     xpath_query="/CUSTOMS_ENTRY_FILE/ENTRY/CHECK_DIGIT",
                 )
             ],
-            {"Check Digit": "5"},
+            {"12312": {"Check Digit": "5"}},
         ],
         [
             [
@@ -46,7 +46,12 @@ def test_xml_string():
                     has_multiple=True,
                 ),
             ],
-            {"Check Digit": "5", "HTS Has Many": "9603908050,3926903500,6911102500"},
+            {
+                "12312": {
+                    "Check Digit": "5",
+                    "HTS Has Many": "9603908050,3926903500,6911102500",
+                }
+            },
         ],
         [
             [
@@ -68,7 +73,12 @@ def test_xml_string():
                     has_multiple=True,
                 ),
             ],
-            {"Check Digit": "5", "HTS Has Many": "9603908050,3926903500,6911102500"},
+            {
+                "12312": {
+                    "Check Digit": "5",
+                    "HTS Has Many": "9603908050,3926903500,6911102500",
+                }
+            },
         ],
         [
             [
@@ -78,7 +88,46 @@ def test_xml_string():
                     xpath_query="/CUSTOMS_ENTRY_FILE/ENTRY//HTS",
                 ),
             ],
-            {"HTS but without has_multiple": "9603908050"},
+            {"12312": {"HTS but without has_multiple": "9603908050"}},
+        ],
+        [
+            [
+                AccountColumn(
+                    account_id,
+                    "HTS",
+                    xpath_query="../HTS",
+                    relative_to_xpath="/CUSTOMS_ENTRY_FILE/ENTRY/INVOICE/ITEM/ITEM_NO",
+                ),
+                AccountColumn(
+                    account_id,
+                    "HTS Entered Value",
+                    xpath_query="../NET_ENTERED_VALUE",
+                    relative_to_xpath="/CUSTOMS_ENTRY_FILE/ENTRY/INVOICE/ITEM/ITEM_NO",
+                ),
+                AccountColumn(
+                    account_id,
+                    "File No",
+                    xpath_query="/CUSTOMS_ENTRY_FILE/ENTRY/FILE_NO",
+                    relative_to_xpath="/CUSTOMS_ENTRY_FILE/ENTRY/INVOICE/ITEM/ITEM_NO",
+                ),
+            ],
+            {
+                "001": {
+                    "File No": "12312",
+                    "HTS": "9603908050",
+                    "HTS Entered Value": "1980",
+                },
+                "002": {
+                    "File No": "12312",
+                    "HTS": "3926903500",
+                    "HTS Entered Value": "6461",
+                },
+                "003": {
+                    "File No": "12312",
+                    "HTS": "6911102500",
+                    "HTS Entered Value": "10472",
+                },
+            },
         ],
     ],
     ids=[
@@ -87,6 +136,7 @@ def test_xml_string():
         "Test Has Multiple Mixed",
         "Inaccessible Path is not included",
         "Multiple entries but without has_multiple set",
+        "Relative xpath has more than one node",
     ],
 )
 def test__procces_xml_and_columns(columns, expected_dict, test_xml_string):
@@ -190,7 +240,7 @@ def test_get_files_to_process(
 @pytest.mark.parametrize(
     "records_to_create,days_back,expected_dict",
     [
-        [[], 0, {}],
+        [[], 0, []],
         [
             [
                 EditradeFileUpdate(
@@ -199,13 +249,13 @@ def test_get_files_to_process(
                     account_id=account_id,
                     file_id="1111",
                     s3_xml_path="BS FILE PATH",
-                    parsed_data={"k1": "v1"},
+                    parsed_data={"1111": {"k1": "v2"}},
                     parsed_time=datetime.utcnow(),
                     needs_processing=False,
                 ),
             ],
             None,
-            {"1111": {"k1": "v1"},},
+            [["1111", {"1111": {"k1": "v2"},}]],
         ],
         [
             [
@@ -215,13 +265,13 @@ def test_get_files_to_process(
                     account_id=account_id,
                     file_id="1111",
                     s3_xml_path="BS FILE PATH",
-                    parsed_data={"k1": "v1"},
+                    parsed_data={"1111": {"k1": "v1"}},
                     parsed_time=datetime.utcnow(),
                     needs_processing=False,
                 ),
             ],
             0,
-            {"1111": {"k1": "v1"},},
+            [["1111", {"1111": {"k1": "v1"},}]],
         ],
         [
             [
@@ -231,13 +281,13 @@ def test_get_files_to_process(
                     account_id=account_id,
                     file_id="1111",
                     s3_xml_path="BS FILE PATH",
-                    parsed_data={"k1": "v1"},
+                    parsed_data={"1111": {"k1": "v1"}},
                     parsed_time=datetime.utcnow(),
                     needs_processing=False,
                 ),
             ],
             0,
-            {},
+            [],
         ],
         [
             [
@@ -247,7 +297,7 @@ def test_get_files_to_process(
                     account_id=account_id,
                     file_id="1111",
                     s3_xml_path="BS FILE PATH",
-                    parsed_data={"k1": "v1"},
+                    parsed_data={"1111": {"k1": "v1"}},
                     parsed_time=datetime.utcnow(),
                     needs_processing=False,
                 ),
@@ -257,13 +307,13 @@ def test_get_files_to_process(
                     account_id=account_id,
                     file_id="2222",
                     s3_xml_path="BS FILE PATH",
-                    parsed_data={"k2": "v2"},
+                    parsed_data={"2222": {"k1": "v2"}},
                     parsed_time=datetime.utcnow(),
                     needs_processing=False,
                 ),
             ],
             0,
-            {"1111": {"k1": "v1"}},
+            [["1111", {"1111": {"k1": "v1"}}]],
         ],
         [
             [
@@ -273,7 +323,7 @@ def test_get_files_to_process(
                     account_id=account_id,
                     file_id="1111",
                     s3_xml_path="BS FILE PATH",
-                    parsed_data={"k1": "v1"},
+                    parsed_data={"1111": {"k1": "v1"}},
                     parsed_time=datetime.utcnow(),
                     needs_processing=False,
                 ),
@@ -283,13 +333,13 @@ def test_get_files_to_process(
                     account_id=account_id,
                     file_id="1111",
                     s3_xml_path="BS FILE PATH",
-                    parsed_data={"k2": "v2"},
+                    parsed_data={"1111": {"k2": "v2"}},
                     parsed_time=datetime.utcnow(),
                     needs_processing=False,
                 ),
             ],
             0,
-            {"1111": {"k1": "v1", "k2": "v2"}},
+            [["1111", {"1111": {"k1": "v1", "k2": "v2"}}]],
         ],
         [
             [
@@ -299,7 +349,7 @@ def test_get_files_to_process(
                     account_id=account_id,
                     file_id="1111",
                     s3_xml_path="BS FILE PATH",
-                    parsed_data={"k1": "v1"},
+                    parsed_data={"1111": {"k1": "v1"}},
                     parsed_time=datetime.utcnow(),
                     needs_processing=False,
                 ),
@@ -309,7 +359,7 @@ def test_get_files_to_process(
                     account_id=account_id,
                     file_id="1111",
                     s3_xml_path="BS FILE PATH",
-                    parsed_data={"k2": "v2"},
+                    parsed_data={"1111": {"k2": "v2"}},
                     parsed_time=datetime.utcnow(),
                     needs_processing=False,
                 ),
@@ -319,13 +369,13 @@ def test_get_files_to_process(
                     account_id=account_id,
                     file_id="1111",
                     s3_xml_path="BS FILE PATH",
-                    parsed_data={"k3": "v3"},
+                    parsed_data={"1111": {"k3": "v3"}},
                     parsed_time=datetime.utcnow(),
                     needs_processing=False,
                 ),
             ],
             0,
-            {"1111": {"k1": "v1", "k2": "v2", "k3": "v3"}},
+            [["1111", {"1111": {"k1": "v1", "k2": "v2", "k3": "v3"}}]],
         ],
         [
             [
@@ -335,7 +385,7 @@ def test_get_files_to_process(
                     account_id=account_id,
                     file_id="1111",
                     s3_xml_path="BS FILE PATH",
-                    parsed_data={"k1": "v1"},
+                    parsed_data={"1111": {"k1": "v1"}},
                     parsed_time=datetime.utcnow(),
                     needs_processing=False,
                 ),
@@ -345,7 +395,7 @@ def test_get_files_to_process(
                     account_id=account_id,
                     file_id="1111",
                     s3_xml_path="BS FILE PATH",
-                    parsed_data={"k2": "v2"},
+                    parsed_data={"1111": {"k2": "v2"}},
                     parsed_time=datetime.utcnow(),
                     needs_processing=False,
                 ),
@@ -355,13 +405,16 @@ def test_get_files_to_process(
                     account_id=account_id,
                     file_id="2222",
                     s3_xml_path="BS FILE PATH",
-                    parsed_data={"k3": "v3"},
+                    parsed_data={"2222": {"k3": "v3"}},
                     parsed_time=datetime.utcnow(),
                     needs_processing=False,
                 ),
             ],
             0,
-            {"1111": {"k1": "v1", "k2": "v2"}, "2222": {"k3": "v3"}},
+            [
+                ["1111", {"1111": {"k1": "v1", "k2": "v2"}}],
+                ["2222", {"2222": {"k3": "v3"}}],
+            ],
         ],
         [
             [
@@ -371,7 +424,7 @@ def test_get_files_to_process(
                     account_id=account_id,
                     file_id="1111",
                     s3_xml_path="BS FILE PATH",
-                    parsed_data={"k1": "v1"},
+                    parsed_data={"1111": {"k1": "v1"}},
                     parsed_time=datetime.utcnow(),
                     needs_processing=False,
                 ),
@@ -381,7 +434,7 @@ def test_get_files_to_process(
                     account_id=account_id,
                     file_id="2222",
                     s3_xml_path="BS FILE PATH",
-                    parsed_data={"key1": "val1"},
+                    parsed_data={"2222": {"key1": "val1"}},
                     parsed_time=datetime.utcnow(),
                     needs_processing=False,
                 ),
@@ -391,7 +444,9 @@ def test_get_files_to_process(
                     account_id=account_id,
                     file_id="1111",
                     s3_xml_path="BS FILE PATH",
-                    parsed_data={"k1": "old hidden value", "k2": "old value but shown"},
+                    parsed_data={
+                        "1111": {"k1": "old hidden value", "k2": "old value but shown"}
+                    },
                     parsed_time=datetime.utcnow(),
                     needs_processing=False,
                 ),
@@ -401,16 +456,58 @@ def test_get_files_to_process(
                     account_id=account_id,
                     file_id="3333",
                     s3_xml_path="BS FILE PATH",
-                    parsed_data={"k1": "v1"},
+                    parsed_data={"3333": {"k1": "v1"}},
                     parsed_time=datetime.utcnow(),
                     needs_processing=False,
                 ),
             ],
             3,
-            {
-                "1111": {"k1": "v1", "k2": "old value but shown"},
-                "2222": {"key1": "val1"},
-            },
+            [
+                ["1111", {"1111": {"k1": "v1", "k2": "old value but shown"}},],
+                ["2222", {"2222": {"key1": "val1"}}],
+            ],
+        ],
+        [
+            [
+                EditradeFileUpdate(
+                    file_uuid="uuid1",
+                    editrade_upload_date=datetime.utcnow(),
+                    account_id=account_id,
+                    file_id="1111",
+                    s3_xml_path="BS FILE PATH",
+                    parsed_data={
+                        "other_key1": {"k1": "v1"},
+                        "other_key2": {"k2": "v2"},
+                    },
+                    parsed_time=datetime.utcnow(),
+                    needs_processing=False,
+                ),
+                EditradeFileUpdate(
+                    file_uuid="uuid2",
+                    editrade_upload_date=datetime.utcnow() - timedelta(days=1),
+                    account_id=account_id,
+                    file_id="1111",
+                    s3_xml_path="BS FILE PATH",
+                    parsed_data={
+                        "other_key1": {"k1": "new_value"},
+                        "other_key2": {"new_key": "new_key_value"},
+                        "other_key3": {"k3": "k3"},
+                    },
+                    parsed_time=datetime.utcnow(),
+                    needs_processing=False,
+                ),
+            ],
+            0,
+            [
+                [
+                    "1111",
+                    {
+                        "other_key1": {"k1": "new_value"},
+                        "other_key2": {"k2": "v2", "new_key": "new_key_value"},
+                        "other_key3": {"k3": "k3"},
+                    },
+                ]
+            ],
         ],
     ],
     ids=[
@@ -423,6 +520,7 @@ def test_get_files_to_process(
         "Today, same file over three days",
         "Today, two files of data",
         "File with overwritten key that is older than requested date range but recent file in the range",
+        "Multiple sub keys in a record are merged correctly",
     ],
 )
 @pytest.mark.integration
@@ -432,14 +530,16 @@ def test_merge_recent_processed_files_for_account_id(
     for record in records_to_create:
         record.save()
 
-    file_id_merge_file_object = {
-        file_id: merged_file_object.parsed_data
+    file_id_merge_file_object = [
+        [file_id, merged_file_object.parsed_data]
         for file_id, merged_file_object in EditradeFileService.merge_recent_processed_files_for_account_id(
             account_id, days_back=days_back
         ).items()
-    }
+    ]
 
-    assert file_id_merge_file_object == expected_dict
+    assert file_id_merge_file_object.sort(key=lambda i: i[0]) == expected_dict.sort(
+        key=lambda i: i[0]
+    )
 
     for record in records_to_create:
         record.delete()
@@ -598,6 +698,8 @@ def test_is_last_parsed_time_for_account_within_days(
 
 column1 = AccountColumn(account_id, "Col1", xpath_query="foo")
 column2 = AccountColumn(account_id, "Col2", xpath_query="foo")
+row_id_1 = "1111"
+row_id_2 = "2222"
 
 
 @pytest.mark.parametrize(
@@ -608,7 +710,9 @@ column2 = AccountColumn(account_id, "Col2", xpath_query="foo")
             [column1],
             [
                 EditradeMergedFile(
-                    account_id, "111", parsed_data={column1.column_name: "value"}
+                    account_id,
+                    "111",
+                    parsed_data={row_id_1: {column1.column_name: "value"}},
                 ),
             ],
             [[column1.column_name], ["value"]],
@@ -617,10 +721,14 @@ column2 = AccountColumn(account_id, "Col2", xpath_query="foo")
             [column1],
             [
                 EditradeMergedFile(
-                    account_id, "111", parsed_data={column1.column_name: "value"}
+                    account_id,
+                    "111",
+                    parsed_data={row_id_1: {column1.column_name: "value"}},
                 ),
                 EditradeMergedFile(
-                    account_id, "222", parsed_data={column1.column_name: "value2"}
+                    account_id,
+                    "222",
+                    parsed_data={row_id_1: {column1.column_name: "value2"}},
                 ),
             ],
             [[column1.column_name], ["value"], ["value2"]],
@@ -629,7 +737,9 @@ column2 = AccountColumn(account_id, "Col2", xpath_query="foo")
             [column2, column1],
             [
                 EditradeMergedFile(
-                    account_id, "111", parsed_data={column1.column_name: "value"}
+                    account_id,
+                    "111",
+                    parsed_data={row_id_1: {column1.column_name: "value"}},
                 ),
             ],
             [[column1.column_name, column2.column_name], ["value", None]],
@@ -638,7 +748,9 @@ column2 = AccountColumn(account_id, "Col2", xpath_query="foo")
             [column2, column1],
             [
                 EditradeMergedFile(
-                    account_id, "111", parsed_data={column1.column_name: "value"}
+                    account_id,
+                    "111",
+                    parsed_data={row_id_1: {column1.column_name: "value"}},
                 ),
                 EditradeMergedFile(
                     "randaccount",
@@ -655,12 +767,32 @@ column2 = AccountColumn(account_id, "Col2", xpath_query="foo")
                     account_id,
                     "111",
                     parsed_data={
-                        column1.column_name: "value",
-                        "randomcol": "value should not appear",
+                        row_id_1: {
+                            column1.column_name: "value",
+                            "randomcol": "value should not appear",
+                        }
                     },
                 ),
             ],
             [[column1.column_name, column2.column_name], ["value", None]],
+        ],
+        [
+            [column2, column1],
+            [
+                EditradeMergedFile(
+                    account_id,
+                    "111",
+                    parsed_data={
+                        row_id_1: {column1.column_name: "value"},
+                        row_id_2: {column2.column_name: "value_2"},
+                    },
+                ),
+            ],
+            [
+                [column1.column_name, column2.column_name],
+                ["value", None],
+                [None, "value_2"],
+            ],
         ],
     ],
     ids=[
@@ -670,6 +802,7 @@ column2 = AccountColumn(account_id, "Col2", xpath_query="foo")
         "File does not have column",
         "Multiple Accounts",
         "Parsed data includes columns that are not in the columns list",
+        "Multiple row ids in one file result in multiple rows",
     ],
 )
 @pytest.mark.integration

@@ -11,8 +11,8 @@ Helper file to create all tables in one command
 """
 
 if __name__ == "__main__":
-    # account_id = "002113"
-    account_id = "001940"
+    account_id = "002113"
+    # account_id = "001940"
     #
     # editrade_file_service = EditradeFileService()
     # editrade_file_service.reprocess_files(account_id)
@@ -34,7 +34,7 @@ if __name__ == "__main__":
     #     "/Usr/macship/EDITRADEOUT/002113/EntryExtract-141945-D37{2020-04-16-140437}{4150BE4E-9816-46B0-9ABC-EA03C035B429}.xml",
     #     {},
     # )
-    # updategooglesheets({"hours": 1}, {})
+    updategooglesheets({"days": 30}, {})
     report = ReportGoogleSheet.get(account_id)
     sheet = GoogleSheetService().get_or_create_spreadsheet(account_id)
     sheet.share("daniel.kez@gmail.com", perm_type="user", role="writer")

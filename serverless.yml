@@ -19,6 +19,8 @@ provider:
     USE_PARAMETER_STORE: True
     STAGE: ${opt:stage, self:provider.stage}
     DYNAMO_HOST: ""
+  deploymentBucket:
+    blockPublicAccess: true
   iamRoleStatements:
     - Effect: Allow
       Action:

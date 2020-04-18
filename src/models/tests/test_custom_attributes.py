@@ -24,8 +24,8 @@ class TestBooleanAsNumberAttribute:
         BooleanAsNumberAttribute.serialize
         """
         attr = BooleanAsNumberAttribute()
-        assert attr.serialize(True) == 1
-        assert attr.serialize(False) == 0
+        assert attr.serialize(True) == "1"
+        assert attr.serialize(False) == "0"
         assert attr.serialize(None) is None
 
     def test_boolean_as_number_deserialize(self):
