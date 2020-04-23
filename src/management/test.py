@@ -11,11 +11,11 @@ Helper file to create all tables in one command
 """
 
 if __name__ == "__main__":
-    account_id = "002113"
-    # account_id = "001940"
-    #
-    # editrade_file_service = EditradeFileService()
-    # editrade_file_service.reprocess_files(account_id)
+    # account_id = "002113"
+    account_id = "001940"
+
+    editrade_file_service = EditradeFileService()
+    editrade_file_service.reprocess_files(account_id)
 
     # with EditradeFileUpdate.batch_write() as batch:
     #     for file in EditradeFileUpdate.scan():
@@ -37,5 +37,5 @@ if __name__ == "__main__":
     updategooglesheets({"days": 30}, {})
     report = ReportGoogleSheet.get(account_id)
     sheet = GoogleSheetService().get_or_create_spreadsheet(account_id)
-    sheet.share("daniel.kez@gmail.com", perm_type="user", role="writer")
+    # sheet.share("daniel.kez@gmail.com", perm_type="user", role="writer")
     print(report.spreadsheet_url)

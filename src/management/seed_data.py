@@ -201,17 +201,24 @@ if __name__ == "__main__":
             ),
             AccountColumn(
                 "001940",
-                "Estimated Arrival Date",
+                "Customs Release Date",
                 xpath_query="../ITEM/PGA_FDA/ANTICIPATED_ARRIVAL_DATE_TIME",
                 relative_to_xpath=account_001940_relative_to_xpath,
                 order=19,
             ),
             AccountColumn(
                 "001940",
+                "Estimated Arrival Date",
+                xpath_query="/CUSTOMS_ENTRY_FILE/ENTRY/ESTIMATED_ARRIVAL_DATE",
+                relative_to_xpath=account_001940_relative_to_xpath,
+                order=20,
+            ),
+            AccountColumn(
+                "001940",
                 "Actual Arrival Date",
                 xpath_query="/CUSTOMS_ENTRY_FILE/ENTRY/MANIFEST/DELIVERY_ORDER/ARRIVAL_DATE",
                 relative_to_xpath=account_001940_relative_to_xpath,
-                order=20,
+                order=21,
             ),
         ],
     }

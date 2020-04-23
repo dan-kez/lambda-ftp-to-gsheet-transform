@@ -17,6 +17,7 @@ from models.editrade_file_update import (
 from models.editrade_merged_file import EditradeMergedFile
 from services.editrade_ftp_file_parser import EditradeFTPFileParser
 from services.ftp_to_s3 import editrade_ftp_service
+from services.rate_limiter import file_merged_update_throttle, file_diff_update_throttle
 from utils.merge_dicts import merge_dicts
 
 xmlparser = etree.HTMLParser()
@@ -153,14 +154,16 @@ class EditradeFileService(object):
         editrade_files_to_update = list(EditradeFileUpdate.scan(condition))
         with EditradeFileUpdate.batch_write() as file_update_batch:
             for file in editrade_files_to_update:
-                self.process_by_editrade_file_update_object(
-                    file, batch=file_update_batch
-                )
+                with file_diff_update_throttle():
+                    self.process_by_editrade_file_update_object(
+                        file, batch=file_update_batch
+                    )
         file_ids_reprocessed = {file.file_id for file in editrade_files_to_update}
 
         with EditradeMergedFile.batch_write() as merged_file_batch:
             for file_id in file_ids_reprocessed:
-                self.merge_file_diffs_for_file_id(file_id, batch=merged_file_batch)
+                with file_merged_update_throttle():
+                    self.merge_file_diffs_for_file_id(file_id, batch=merged_file_batch)
 
     @staticmethod
     def filter_known_files_from_ftp_path(ftp_paths: Set[str]) -> Set[str]:
@@ -214,20 +217,23 @@ class EditradeFileService(object):
         ordered_file_diffs = list(FileDiffsByFileIDIndex.query(file_id))
         account_id = ordered_file_diffs[0].account_id
 
-        ordered_parsed_data = [record.parsed_data for record in ordered_file_diffs]
-        merged_parsed_data_for_file = dict(
-            reduce(merge_dicts, [{}] + ordered_parsed_data)
-        )
+        ordered_parsed_data = [
+            record.parsed_data for record in ordered_file_diffs if record.parsed_data
+        ]
+        if ordered_parsed_data:
+            merged_parsed_data_for_file = dict(
+                reduce(merge_dicts, [{}] + ordered_parsed_data)
+            )
 
-        merged_file_data = EditradeMergedFile(
-            account_id, file_id, parsed_data=merged_parsed_data_for_file
-        )
+            merged_file_data = EditradeMergedFile(
+                account_id, file_id, parsed_data=merged_parsed_data_for_file
+            )
 
-        if batch:
-            batch.save(merged_file_data)
-        else:
-            merged_file_data.save()
-        return merged_file_data
+            if batch:
+                batch.save(merged_file_data)
+            else:
+                merged_file_data.save()
+            return merged_file_data
 
     @staticmethod
     def merge_recent_processed_files_for_account_id(

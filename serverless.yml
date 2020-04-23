@@ -10,6 +10,17 @@ package:
 
 custom:
   bucket: ${env:S3_BUCKET_NAME}
+  alerts:
+    stages:
+      - prod
+    topics:
+      alarm:
+        topic: ${self:service}-${opt:stage}-alerts-alarm
+        notifications:
+          - protocol: email
+            endpoint: ${env:ALERTING_EMAIL_ADDRESS}
+    alarms:
+      - functionThrottles
 
 provider:
   name: aws
@@ -58,7 +69,7 @@ plugins:
   - serverless-step-functions
   - serverless-pseudo-parameters
   - serverless-python-requirements
-#  - serverless-plugin-aws-alerts
+  - serverless-plugin-aws-alerts
   - serverless-dotenv-plugin
 
 functions:
