@@ -7,6 +7,7 @@ from lxml import etree
 from lxml.etree import Element
 
 import settings
+from functions.custom_lambda_exceptions import InvalidFileName
 from models.column import AccountColumn
 from models.editrade_file_update import (
     FilesToProcessIndex,
@@ -201,9 +202,12 @@ class EditradeFileService(object):
         """
         Helper method primarily for use in stubbing during testing
         """
-        editrade_file_update_object = EditradeFTPFileParser(
-            ftp_path
-        ).to_editrade_file_update()
+        try:
+            editrade_file_update_object = EditradeFTPFileParser(
+                ftp_path
+            ).to_editrade_file_update()
+        except InvalidFileName:
+            return False
 
         return EditradeFileUpdate.record_exists(editrade_file_update_object.file_uuid)
 
