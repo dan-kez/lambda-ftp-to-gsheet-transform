@@ -650,12 +650,29 @@ def test_merge_recent_processed_files_for_account_id(
             ],
             False,
         ],
+        [
+            "/Usr/macship/EDITRADEOUT/BAD FILE PATH.xml",
+            [
+                EditradeFileUpdate(
+                    file_uuid="Some other UUID FOR Same file",
+                    editrade_upload_date=datetime.today(),
+                    account_id=account_id,
+                    file_id="141888",
+                    s3_xml_path="BS FILE PATH",
+                    parsed_data={"k1": "v1"},
+                    parsed_time=datetime.utcnow(),
+                    needs_processing=False,
+                )
+            ],
+            False,
+        ],
     ],
     ids=[
         "File is in db, uuid matches",
         "File is in db but uuid does not match",
         "File is in db with matching uuid and non matching uuid",
         "File is not in db",
+        "Invalid file path returns false",
     ],
 )
 @pytest.mark.integration
