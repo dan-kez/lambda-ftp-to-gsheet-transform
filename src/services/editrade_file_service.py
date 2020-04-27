@@ -1,9 +1,10 @@
 from datetime import timedelta, datetime
 from functools import cached_property, reduce
-from typing import List, Set, Dict
+from typing import List, Set, Dict, Union
 
 import boto3
 from lxml import etree
+from lxml.etree import Element
 
 import settings
 from models.column import AccountColumn
@@ -63,14 +64,30 @@ def _procces_xml_and_columns(
             if values:
                 if column.has_multiple:
                     value_to_set = ",".join(
-                        [value.text for value in values if value.text]
+                        [_get_text_from_possible_node(value) for value in values]
                     )
                     if value_to_set:
                         parsed_dict[row_id][column.column_name] = value_to_set
                 else:
-                    if values[0].text:
-                        parsed_dict[row_id][column.column_name] = values[0].text
+                    if isinstance(values, list):
+                        node_text = _get_text_from_possible_node(values[0])
+                    else:
+                        node_text = _get_text_from_possible_node(values)
+
+                    if node_text:
+                        parsed_dict[row_id][column.column_name] = node_text
     return parsed_dict
+
+
+def _get_text_from_possible_node(
+    possible_node: Union[Element, str, None]
+) -> Union[str, None]:
+    if possible_node is None:
+        return
+    if isinstance(possible_node, str):
+        return possible_node
+
+    return possible_node.text
 
 
 class EditradeFileService(object):

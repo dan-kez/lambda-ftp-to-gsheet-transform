@@ -34,7 +34,7 @@ if __name__ == "__main__":
     #     "/Usr/macship/EDITRADEOUT/002113/EntryExtract-141945-D37{2020-04-16-140437}{4150BE4E-9816-46B0-9ABC-EA03C035B429}.xml",
     #     {},
     # )
-    updategooglesheets({"days": 30}, {})
+    updategooglesheets({"days": 60}, {})
     report = ReportGoogleSheet.get(account_id)
     sheet = GoogleSheetService().get_or_create_spreadsheet(account_id)
     # sheet.share("daniel.kez@gmail.com", perm_type="user", role="writer")

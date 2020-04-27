@@ -129,6 +129,33 @@ def test_xml_string():
                 },
             },
         ],
+        [
+            [
+                AccountColumn(
+                    account_id,
+                    "HTS Single Many Text",
+                    xpath_query="/CUSTOMS_ENTRY_FILE/ENTRY//HTS/text()",
+                ),
+                AccountColumn(
+                    account_id,
+                    "HTS Has Many Text",
+                    xpath_query="/CUSTOMS_ENTRY_FILE/ENTRY//HTS/text()",
+                    has_multiple=True,
+                ),
+                AccountColumn(
+                    account_id,
+                    "MAWB",
+                    xpath_query="concat(/CUSTOMS_ENTRY_FILE/ENTRY/MANIFEST/ISSUER_CODE, /CUSTOMS_ENTRY_FILE/ENTRY/MANIFEST/MASTER)",
+                ),
+            ],
+            {
+                "12312": {
+                    "HTS Single Many Text": "9603908050",
+                    "HTS Has Many Text": "9603908050,3926903500,6911102500",
+                    "MAWB": "APLUNPPI002733",
+                }
+            },
+        ],
     ],
     ids=[
         "No Columns",
@@ -137,6 +164,7 @@ def test_xml_string():
         "Inaccessible Path is not included",
         "Multiple entries but without has_multiple set",
         "Relative xpath has more than one node",
+        "Parses text results correctly",
     ],
 )
 def test__procces_xml_and_columns(columns, expected_dict, test_xml_string):

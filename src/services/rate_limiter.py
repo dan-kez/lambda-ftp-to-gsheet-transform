@@ -30,4 +30,4 @@ class LocalRateLimiter:
 
 
 file_diff_update_throttle = LocalRateLimiter(rate_per_sec=5, key="file_diff_update")
-file_merged_update_throttle = LocalRateLimiter(rate_per_sec=5, key="file_merged_update")
+file_merged_update_throttle = LocalRateLimiter(rate_per_sec=4, key="file_merged_update")
