@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 import settings
 from functions.custom_lambda_exceptions import NoFilesToProcess
 from services.editrade_file_service import EditradeFileService
@@ -16,7 +18,9 @@ def handle():
         ftp_connection, root_path=settings.FTP_ROOT_DIR
     )
     paths_to_download = EditradeFileService.filter_known_files_from_ftp_path(
-        paths_to_consider
+        # only consider files with names added in the last 10 days
+        paths_to_consider,
+        created_after_timedelta=timedelta(days=5),
     )
 
     # Circumvent subsequent executions if there are no paths to parse / download

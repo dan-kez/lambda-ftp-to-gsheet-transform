@@ -2,11 +2,13 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 import pytest
+from dateutil.tz import tzutc
 
 from models.column import AccountColumn
 from models.editrade_file_update import EditradeFileUpdate
 from models.editrade_merged_file import EditradeMergedFile
 from services.editrade_file_service import _procces_xml_and_columns, EditradeFileService
+from services.editrade_ftp_file_parser import EditradeFTPFileParser
 
 account_id = "123"
 
@@ -574,10 +576,14 @@ def test_merge_recent_processed_files_for_account_id(
 
 
 @pytest.mark.parametrize(
-    "ftp_path,records_to_create,expected_result",
+    "args,records_to_create,expected_result",
     [
         [
-            "/Usr/macship/EDITRADEOUT/001940/EntryExtract-141888-D37{2020-04-04-094106}{A5058E79-2160-4F4E-8E3D-9F406D918449}.xml",
+            [
+                {
+                    "/Usr/macship/EDITRADEOUT/001940/EntryExtract-141888-D37{2020-04-04-094106}{A5058E79-2160-4F4E-8E3D-9F406D918449}.xml"
+                }
+            ],
             [
                 EditradeFileUpdate(
                     file_uuid="A5058E79-2160-4F4E-8E3D-9F406D918449",
@@ -590,10 +596,14 @@ def test_merge_recent_processed_files_for_account_id(
                     needs_processing=False,
                 )
             ],
-            True,
+            set(),
         ],
         [
-            "/Usr/macship/EDITRADEOUT/001940/EntryExtract-141888-D37{2020-04-04-094106}{A5058E79-2160-4F4E-8E3D-9F406D918449}.xml",
+            [
+                {
+                    "/Usr/macship/EDITRADEOUT/001940/EntryExtract-141888-D37{2020-04-04-094106}{A5058E79-2160-4F4E-8E3D-9F406D918449}.xml"
+                }
+            ],
             [
                 EditradeFileUpdate(
                     file_uuid="Some other UUID FOR Same file",
@@ -606,10 +616,16 @@ def test_merge_recent_processed_files_for_account_id(
                     needs_processing=False,
                 )
             ],
-            False,
+            {
+                "/Usr/macship/EDITRADEOUT/001940/EntryExtract-141888-D37{2020-04-04-094106}{A5058E79-2160-4F4E-8E3D-9F406D918449}.xml"
+            },
         ],
         [
-            "/Usr/macship/EDITRADEOUT/001940/EntryExtract-141888-D37{2020-04-04-094106}{A5058E79-2160-4F4E-8E3D-9F406D918449}.xml",
+            [
+                {
+                    "/Usr/macship/EDITRADEOUT/001940/EntryExtract-141888-D37{2020-04-04-094106}{A5058E79-2160-4F4E-8E3D-9F406D918449}.xml"
+                }
+            ],
             [
                 EditradeFileUpdate(
                     file_uuid="A5058E79-2160-4F4E-8E3D-9F406D918449",
@@ -632,10 +648,14 @@ def test_merge_recent_processed_files_for_account_id(
                     needs_processing=False,
                 ),
             ],
-            True,
+            set(),
         ],
         [
-            "/Usr/macship/EDITRADEOUT/001940/EntryExtract-141888-D37{2020-04-04-094106}{A5058E79-2160-4F4E-8E3D-9F406D918449}.xml",
+            [
+                {
+                    "/Usr/macship/EDITRADEOUT/001940/EntryExtract-141888-D37{2020-04-04-094106}{A5058E79-2160-4F4E-8E3D-9F406D918449}.xml"
+                }
+            ],
             [
                 EditradeFileUpdate(
                     file_uuid="Some other UUID FOR Same file",
@@ -648,10 +668,12 @@ def test_merge_recent_processed_files_for_account_id(
                     needs_processing=False,
                 )
             ],
-            False,
+            {
+                "/Usr/macship/EDITRADEOUT/001940/EntryExtract-141888-D37{2020-04-04-094106}{A5058E79-2160-4F4E-8E3D-9F406D918449}.xml"
+            },
         ],
         [
-            "/Usr/macship/EDITRADEOUT/BAD FILE PATH.xml",
+            [{"/Usr/macship/EDITRADEOUT/BAD FILE PATH.xml"}],
             [
                 EditradeFileUpdate(
                     file_uuid="Some other UUID FOR Same file",
@@ -664,7 +686,53 @@ def test_merge_recent_processed_files_for_account_id(
                     needs_processing=False,
                 )
             ],
-            False,
+            set(),
+        ],
+        [
+            [
+                {
+                    f"/Usr/macship/EDITRADEOUT/001940/EntryExtract-141888-D37{{{datetime.now(tzutc()).strftime(EditradeFTPFileParser.TIME_FORMAT)}}}{{A5058E79-2160-4F4E-8E3D-9F406D918449}}.xml"
+                },
+                timedelta(days=2),
+            ],
+            [
+                EditradeFileUpdate(
+                    file_uuid="ASome other uuid49",
+                    # We don't actually do a get in this case, we only look at the input string
+                    editrade_upload_date=datetime.today(),
+                    account_id=account_id,
+                    file_id="141888",
+                    s3_xml_path="BS FILE PATH",
+                    parsed_data={"k1": "v1"},
+                    parsed_time=datetime.utcnow(),
+                    needs_processing=False,
+                )
+            ],
+            {
+                f"/Usr/macship/EDITRADEOUT/001940/EntryExtract-141888-D37{{{datetime.now(tzutc()).strftime(EditradeFTPFileParser.TIME_FORMAT)}}}{{A5058E79-2160-4F4E-8E3D-9F406D918449}}.xml"
+            },
+        ],
+        [
+            [
+                {
+                    f"/Usr/macship/EDITRADEOUT/001940/EntryExtract-141888-D37{{{(datetime.now(tzutc())- timedelta(days=3)).strftime(EditradeFTPFileParser.TIME_FORMAT)}}}{{A5058E79-2160-4F4E-8E3D-9F406D918449}}.xml"
+                },
+                timedelta(days=2),
+            ],
+            [
+                EditradeFileUpdate(
+                    file_uuid="A5058E79-2160-4F4E-8E3D-9F406D918449",
+                    # We don't actually do a get in this case, we only look at the input string
+                    editrade_upload_date=datetime.today(),
+                    account_id=account_id,
+                    file_id="141888",
+                    s3_xml_path="BS FILE PATH",
+                    parsed_data={"k1": "v1"},
+                    parsed_time=datetime.utcnow(),
+                    needs_processing=False,
+                )
+            ],
+            set(),
         ],
     ],
     ids=[
@@ -672,16 +740,20 @@ def test_merge_recent_processed_files_for_account_id(
         "File is in db but uuid does not match",
         "File is in db with matching uuid and non matching uuid",
         "File is not in db",
-        "Invalid file path returns false",
+        "Invalid file path we interpret has having processed",
+        "Timedelta within range has not been processed",
+        "Timedelta outside range has been processed",
     ],
 )
 @pytest.mark.integration
-def test__has_ftp_path_been_processed(
-    ftp_path, records_to_create, expected_result, fixture_model_management
+def test_filter_known_files_from_ftp_path(
+    args, records_to_create, expected_result, fixture_model_management
 ):
     for record in records_to_create:
         record.save()
-    assert EditradeFileService._has_ftp_path_been_processed(ftp_path) == expected_result
+    assert (
+        EditradeFileService.filter_known_files_from_ftp_path(*args) == expected_result
+    )
     for record in records_to_create:
         record.delete()
 

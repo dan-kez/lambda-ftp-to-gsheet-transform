@@ -1,6 +1,6 @@
 from datetime import timedelta, datetime
 from functools import cached_property, reduce
-from typing import List, Set, Dict, Union
+from typing import List, Set, Dict, Union, Optional
 
 import boto3
 from lxml import etree
@@ -21,6 +21,7 @@ from services.editrade_ftp_file_parser import EditradeFTPFileParser
 from services.ftp_to_s3 import editrade_ftp_service
 from services.rate_limiter import file_merged_update_throttle, file_diff_update_throttle
 from utils.merge_dicts import merge_dicts
+from dateutil.tz import tzutc
 
 xmlparser = etree.HTMLParser()
 
@@ -105,8 +106,15 @@ class EditradeFileService(object):
         for record in FilesToProcessIndex.query(True):
             yield record.file_uuid
 
-    def create_file_update_from_ftp_path(self, ftp_path: str) -> EditradeFileUpdate:
-        editrade_file_update = EditradeFTPFileParser(ftp_path).to_editrade_file_update()
+    def create_file_update_from_ftp_path(
+        self, ftp_path: str
+    ) -> Optional[EditradeFileUpdate]:
+        try:
+            editrade_file_update = EditradeFTPFileParser(
+                ftp_path
+            ).to_editrade_file_update()
+        except InvalidFileName:
+            return
 
         # TODO: Would be good to not download the file twice.
         _upload_to_s3_and_create_diff(ftp_path, editrade_file_update)
@@ -184,32 +192,74 @@ class EditradeFileService(object):
                     self.merge_file_diffs_for_file_id(file_id, batch=merged_file_batch)
 
     @staticmethod
-    def filter_known_files_from_ftp_path(ftp_paths: Set[str]) -> Set[str]:
+    def filter_known_files_from_ftp_path(
+        ftp_paths: Set[str], created_after_timedelta: timedelta = None
+    ) -> Set[str]:
         """
         Given a set of ftp paths, check filter those that exist in the db
         :param ftp_paths:
+        :param created_after_timedelta:
         :return:
         """
         # TODO: Change this to a batch approach. This is making a db call in a loop
-        return {
-            ftp_path
-            for ftp_path in ftp_paths
-            if not EditradeFileService._has_ftp_path_been_processed(ftp_path)
+
+        filtered_file_uuid_to_ftp_path: Dict[str, str] = {}
+        for ftp_path in ftp_paths:
+            # Remove any invalid files
+            try:
+                editrade_parsed_ftp_object = EditradeFTPFileParser(ftp_path)
+            except InvalidFileName:
+                continue
+
+            # Remove any files added before our filter criteria
+            if created_after_timedelta is not None:
+                if editrade_parsed_ftp_object.datetime < (
+                    datetime.now(tzutc()) - created_after_timedelta
+                ):
+                    continue
+
+            filtered_file_uuid_to_ftp_path[
+                editrade_parsed_ftp_object.file_uuid
+            ] = ftp_path
+
+        file_uuids_that_exist = {
+            file_update.file_uuid
+            for file_update in EditradeFileUpdate.batch_get(
+                filtered_file_uuid_to_ftp_path.keys(), attributes_to_get=["file_uuid"]
+            )
         }
 
+        # Get the set of file uuids that are not in the DB
+        filtered_file_uuids = (
+            filtered_file_uuid_to_ftp_path.keys() - file_uuids_that_exist
+        )
+
+        filtered_ftp_paths = {
+            filtered_file_uuid_to_ftp_path[file_uuid]
+            for file_uuid in filtered_file_uuids
+        }
+
+        return filtered_ftp_paths
+
     @staticmethod
-    def _has_ftp_path_been_processed(ftp_path: str) -> bool:
+    def _get(
+        ftp_path: str, created_after_timedelta: timedelta = None
+    ) -> Optional[EditradeFTPFileParser]:
         """
         Helper method primarily for use in stubbing during testing
         """
         try:
-            editrade_file_update_object = EditradeFTPFileParser(
-                ftp_path
-            ).to_editrade_file_update()
+            editrade_parsed_ftp_object = EditradeFTPFileParser(ftp_path)
         except InvalidFileName:
-            return False
+            return
 
-        return EditradeFileUpdate.record_exists(editrade_file_update_object.file_uuid)
+        if created_after_timedelta is not None:
+            if editrade_parsed_ftp_object.datetime < (
+                datetime.now(tzutc()) - created_after_timedelta
+            ):
+                return
+
+        return editrade_parsed_ftp_object
 
     @staticmethod
     def is_last_parsed_time_for_account_within_timedelta(
